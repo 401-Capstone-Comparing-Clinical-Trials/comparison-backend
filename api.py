@@ -50,7 +50,7 @@ def sortTrials(fullStudies):
         try:
             return int(fullStudies['score'])
         except KeyError:
-            return 0
+            return float('-inf')
     fullStudies.sort(key=score, reverse=True)
 
 # Assign score to all trials
