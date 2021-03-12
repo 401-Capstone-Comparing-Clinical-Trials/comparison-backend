@@ -18,7 +18,7 @@ def home():
 #     "sortingCriteria": "age",
 #     "order": "ascending"
 # }
-API_ENDPOINT = "https://clinicaltrials.gov/api/query/full_studies?expr=paloma+3%0D%0A&min_rnk=1&max_rnk=2&fmt=json"
+API_ENDPOINT = "https://clinicaltrials.gov/api/query/full_studies?expr=paloma+3%0D%0A&min_rnk=1&max_rnk=3&fmt=json"
 response = requests.get(API_ENDPOINT)
 
 def jsonArrayFromFrontend(): #(fullStudies):
@@ -56,19 +56,22 @@ def sortTrials(fullStudies):
 # Assign score to all trials
 def setUpScore(fullStudies, age, condtion, inclusion, exclusion, ongoing, completed, includeDrug, excludeDrug):
     for study in fullStudies:
+        protocolSection=study['Study']['ProtocolSection']
         score=0
-        if study['Study']['ProtocolSection']['EligibilityModule']['MinimumAge']:
-            eligibilityModule=study['Study']['ProtocolSection']['EligibilityModule']
+        if protocolSection['EligibilityModule']:
+            eligibilityModule=protocolSection['EligibilityModule']
             # Check if age is in range
-            if eligibilityModule['MinimumAge']:
+            try:
                 minAge = eligibilityModule['MinimumAge']
                 intMinAge = int(minAge.split(' ')[0])
                 if not age == '':
                     if int(age)>intMinAge:
                         score+=1
+            except KeyError:
+                print "No minimumAge Section"
             
             # Check eligibilityCriteria
-            if eligibilityModule['EligibilityCriteria']:
+            try:
                 eligibilityCriteria=eligibilityModule['EligibilityCriteria']
                 
                 inCriteria=False
@@ -95,17 +98,22 @@ def setUpScore(fullStudies, age, condtion, inclusion, exclusion, ongoing, comple
                     if not exclusion == '':
                         if exclusion in exStr:
                             score+=1
-                
+            except KeyError:
+                print "No EligibilityCriteria Section"
+            
+            
         # Check if this condition exists
-        if study['Study']['ProtocolSection']['ConditionsModule']['ConditionList']['Condition']:
-            conList=study['Study']['ProtocolSection']['ConditionsModule']['ConditionList']['Condition']
+        try:
+            conList=protocolSection['ConditionsModule']['ConditionList']['Condition']
             if not condtion == '':
                 if condtion in conList:
                     score+=1
+        except KeyError:
+            print "No condition Section"
         
         
-        if study['Study']['ProtocolSection']['StatusModule']['CompletionDateStruct']['CompletionDateType']:
-            completedDate=study['Study']['ProtocolSection']['StatusModule']['CompletionDateStruct']['CompletionDateType']
+        try:
+            completedDate=protocolSection['StatusModule']['CompletionDateStruct']['CompletionDateType']
             # Check completed
             if completed:
                 if completedDate=='Actual':
@@ -115,22 +123,25 @@ def setUpScore(fullStudies, age, condtion, inclusion, exclusion, ongoing, comple
             if ongoing:
                 if completedDate=='Anticipated':
                     score+=1
+        except KeyError:
+            print "No completion date Section"
+            
         
-        
-        # Check includeDrug and excludeDrug
-        if study['Study']['ProtocolSection']['ArmsInterventionsModule']['ArmGroupList']['ArmGroup']:
-            armGroup=study['Study']['ProtocolSection']['ArmsInterventionsModule']['ArmGroupList']['ArmGroup']
+        try:
+            # Check includeDrug and excludeDrug
+            armGroup=protocolSection['ArmsInterventionsModule']['ArmGroupList']['ArmGroup']
             for arm in armGroup:
-                if arm['ArmGroupInterventionList']['ArmGroupInterventionName']:
-                    drugList=arm['ArmGroupInterventionList']['ArmGroupInterventionName']
-                    for drug in drugList:
-                        if not includeDrug == '':
-                            if includeDrug.lower() in drug.lower(): # Make drug string to lower case 
-                                score+=1 # includeDrug
-                        if not excludeDrug == '':
-                            if excludeDrug.lower() in drug.lower():
-                                score-=1 # excludeDrug
-
+                drugList=arm['ArmGroupInterventionList']['ArmGroupInterventionName']
+                for drug in drugList:
+                    if not includeDrug == '':
+                        if includeDrug.lower() in drug.lower(): # Make drug string to lower case 
+                            score+=1 # includeDrug
+                    if not excludeDrug == '':
+                        if excludeDrug.lower() in drug.lower():
+                            score-=1 # excludeDrug
+        except KeyError:
+            print "No includeDrug and excludeDrug Section"
+            
         study.update({'score':score})
     
 
