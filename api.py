@@ -18,7 +18,7 @@ def home():
 #     "sortingCriteria": "age",
 #     "order": "ascending"
 # }
-API_ENDPOINT = "https://clinicaltrials.gov/api/query/full_studies?expr=paloma+3%0D%0A&min_rnk=1&max_rnk=3&fmt=json"
+API_ENDPOINT = "https://clinicaltrials.gov/api/query/full_studies?expr=paloma+3%0D%0A&min_rnk=1&max_rnk=50&fmt=json"
 response = requests.get(API_ENDPOINT)
 
 def jsonArrayFromFrontend(): #(fullStudies):
@@ -56,7 +56,12 @@ def sortTrials(fullStudies):
 # Assign score to all trials
 def setUpScore(fullStudies, age, condtion, inclusion, exclusion, ongoing, completed, includeDrug, excludeDrug):
     for study in fullStudies:
-        protocolSection=study['Study']['ProtocolSection']
+        try:
+            protocolSection=study['Study']['ProtocolSection']
+        except KeyError:
+            print "No Protocol Section"
+            continue
+            
         score=0
         if protocolSection['EligibilityModule']:
             eligibilityModule=protocolSection['EligibilityModule']
