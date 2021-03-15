@@ -5,7 +5,7 @@ import requests
 app = flask.Flask(__name__)
 app.config["DEBUG"] = True
 
-@app.route('/', methods=['POST'])
+@app.route('/', methods=['GET'])
 def home():
     return '''
     <h1>Comparison Backend</h1>
@@ -36,7 +36,7 @@ def jsonArrayFromFrontend(): #(fullStudies):
 
 
 # Sort Trials By Criteria Route
-@app.route('/api/sortTrialsByCriteria', methods=['POST'])
+@app.route('/api/sortTrialsByCriteria', methods=['GET'])
 def api_sortTrialsByCriteria():
     return jsonify(
         status=True,
