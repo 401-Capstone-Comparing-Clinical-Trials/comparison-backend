@@ -51,7 +51,7 @@ def apply_sorting_criteria(trial_data):
 
 # Sort Trials By Criteria Route
 @app.route('/api/sortTrialsByCriteria', methods=['GET'])
-def api_sort_trials_by_criteria():
+def api_sortTrialsByCriteria():
 
     keyword = request.form['keyword']
     num_results = request.form['numResults']
@@ -174,5 +174,5 @@ def set_up_score(trial_data, age, condition, inclusion, exclusion, ongoing, comp
         study.update({'score':score})
     
 
-app.run()
+app.run(debug=True, host='0.0.0.0')
 
