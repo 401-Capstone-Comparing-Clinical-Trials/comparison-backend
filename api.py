@@ -69,13 +69,13 @@ def api_sort_trials_by_criteria():
     )
 
 # sort trials from highest score to lowest (if there is no score, put this trial to tail)
-def sort_trials(fullStudies):
-    def score(fullStudies):
+def sort_trials(full_studies):
+    def score(full_studies):
         try:
-            return int(fullStudies['score'])
+            return int(full_studies['score'])
         except KeyError:
             return float('-inf')
-    fullStudies.sort(key=score, reverse=True)
+    full_studies.sort(key=score, reverse=True)
 
 # Assign score to all trials
 def set_up_score(trial_data, age, condition, inclusion, exclusion, ongoing, completed, include_drug, exclude_drug):
