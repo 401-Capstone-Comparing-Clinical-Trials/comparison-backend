@@ -22,56 +22,54 @@ def home():
 # _______________________ API END _______________________ #
 
 
-def getTrials(keyword, numResults): #(fullStudies):
+def get_trials(keyword, num_results): #(fullStudies):
     
     # Use keyword and numResults to query the API
     key = keyword.split()
     search = ""
-    lastInd = len(key) - 1
+    last_ind = len(key) - 1
 
     for i in range(0, len(key)):
         search = search + key[i]
-        if i != lastInd:
+        if i != last_ind:
             search += "+"
 
-    queryString = "https://clinicaltrials.gov/api/query/full_studies?expr=" + search + "&min_rnk=1&max_rnk=" + numResults + "&fmt=json"
+    query_string = "https://clinicaltrials.gov/api/query/full_studies?expr=" + search + "&min_rnk=1&max_rnk=" + num_results + "&fmt=json"
 
-    print(queryString)
+    print(query_string)
 
-    response = requests.get(queryString)
+    response = requests.get(query_string)
 
-    fullStudiesResponse=response.json()['FullStudiesResponse']
-    fullStudies=fullStudiesResponse['FullStudies']
+    full_studies_response =response.json()['FullStudiesResponse']
+    full_studies = full_studies_response['FullStudies']
     # Frontend should pass fullStudies to backend, here I just call directly from API
     
-    return fullStudies
+    return full_studies
     
-def applySortingCriteria(trialdata):
-    #setUpScore(trialdata, '19', 'Breast Cancer', 'breast cancer', 'CNS', True, False, 'Palbociclib', 'Placebo')
-    #sortTrials(trialdata)
-    a = "hello"
+def apply_sorting_criteria(trial_data):
+    print(" not done ")
 
 # Sort Trials By Criteria Route
 @app.route('/api/sortTrialsByCriteria', methods=['GET'])
-def api_sortTrialsByCriteria():
+def api_sort_trials_by_criteria():
 
     keyword = request.form['keyword']
-    numresults = request.form['numResults']
+    num_results = request.form['numResults']
 
-    print(keyword + ", " + numresults)
+    print(keyword + ", " + num_results)
     # get trial data based on keyword and numResults from front end request
-    trialdata = getTrials(keyword, numresults)
+    trial_data = get_trials(keyword, num_results)
 
-    applySortingCriteria(trialdata)
+    apply_sorting_criteria(trial_data)
 
     return jsonify(
         status=True,
         message="Successfully sorted trials",
-        data=trialdata
+        data=trial_data
     )
 
 # sort trials from highest score to lowest (if there is no score, put this trial to tail)
-def sortTrials(fullStudies):
+def sort_trials(fullStudies):
     def score(fullStudies):
         try:
             return int(fullStudies['score'])
@@ -80,54 +78,54 @@ def sortTrials(fullStudies):
     fullStudies.sort(key=score, reverse=True)
 
 # Assign score to all trials
-def setUpScore(fullStudies, age, condition, inclusion, exclusion, ongoing, completed, includeDrug, excludeDrug):
-    for study in fullStudies:
+def set_up_score(trial_data, age, condition, inclusion, exclusion, ongoing, completed, include_drug, exclude_drug):
+    for study in trial_data:
         try:
-            protocolSection=study['Study']['ProtocolSection']
+            protocol_section=study['Study']['ProtocolSection']
         except KeyError:
             print("No Protocol Section")
             continue
             
         score=0
-        if protocolSection['EligibilityModule']:
-            eligibilityModule=protocolSection['EligibilityModule']
+        if protocol_section['EligibilityModule']:
+            eligibility_module=protocol_section['EligibilityModule']
             # Check if age is in range
             try:
-                minAge = eligibilityModule['MinimumAge']
-                intMinAge = int(minAge.split(' ')[0])
+                min_age = eligibility_module['MinimumAge']
+                int_min_age = int(min_age.split(' ')[0])
                 if not age == '':
-                    if int(age)>intMinAge:
+                    if int(age)>int_min_age:
                         score+=1
             except KeyError:
                 print("No minimumAge Section")
             
             # Check eligibilityCriteria
             try:
-                eligibilityCriteria=eligibilityModule['EligibilityCriteria']
+                eligibility_criteria=eligibility_module['EligibilityCriteria']
                 
-                inCriteria=False
-                exCriteria=False
-                inStr=eligibilityCriteria
-                exStr=eligibilityCriteria
+                in_criteria=False
+                ex_criteria=False
+                in_str=eligibility_criteria
+                ex_str=eligibility_criteria
                 
                 # Check inclusion
-                if 'Inclusion Criteria:' in eligibilityCriteria:
-                    inCriteria=True
+                if 'Inclusion Criteria:' in eligibility_criteria:
+                    in_criteria=True
                     
                 # Check exclusion
-                if 'Exclusion Criteria:' in eligibilityCriteria:
-                    exCriteria=True
-                    if inCriteria:
-                        inStr, exStr = eligibilityCriteria.split('Exclusion Criteria:')
+                if 'Exclusion Criteria:' in eligibility_criteria:
+                    ex_criteria=True
+                    if in_criteria:
+                        in_str, ex_str = eligibility_criteria.split('Exclusion Criteria:')
                         
-                if inCriteria:
+                if in_criteria:
                     if not inclusion == '':
-                        if inclusion in inStr:
+                        if inclusion in in_str:
                             score+=1
                     
-                if exCriteria:
+                if ex_criteria:
                     if not exclusion == '':
-                        if exclusion in exStr:
+                        if exclusion in ex_str:
                             score+=1
             except KeyError:
                 print("No EligibilityCriteria Section")
@@ -135,24 +133,24 @@ def setUpScore(fullStudies, age, condition, inclusion, exclusion, ongoing, compl
             
         # Check if this condition exists
         try:
-            conList=protocolSection['ConditionsModule']['ConditionList']['Condition']
-            if not condtion == '':
-                if condtion in conList:
+            con_list=protocol_section['ConditionsModule']['ConditionList']['Condition']
+            if not condition == '':
+                if condition in con_list:
                     score+=1
         except KeyError:
             print("No condition Section")
         
         
         try:
-            completedDate=protocolSection['StatusModule']['CompletionDateStruct']['CompletionDateType']
+            completed_date=protocol_section['StatusModule']['CompletionDateStruct']['CompletionDateType']
             # Check completed
             if completed:
-                if completedDate=='Actual':
+                if completed_date=='Actual':
                     score+=1
                     
             # Check ongoing
             if ongoing:
-                if completedDate=='Anticipated':
+                if completed_date=='Anticipated':
                     score+=1
         except KeyError:
             print("No completion date Section")
@@ -160,15 +158,15 @@ def setUpScore(fullStudies, age, condition, inclusion, exclusion, ongoing, compl
         
         try:
             # Check includeDrug and excludeDrug
-            armGroup=protocolSection['ArmsInterventionsModule']['ArmGroupList']['ArmGroup']
-            for arm in armGroup:
-                drugList=arm['ArmGroupInterventionList']['ArmGroupInterventionName']
-                for drug in drugList:
-                    if not includeDrug == '':
-                        if includeDrug.lower() in drug.lower(): # Make drug string to lower case 
+            arm_group=protocol_section['ArmsInterventionsModule']['ArmGroupList']['ArmGroup']
+            for arm in arm_group:
+                drug_list=arm['ArmGroupInterventionList']['ArmGroupInterventionName']
+                for drug in drug_list:
+                    if not include_drug == '':
+                        if include_drug.lower() in drug.lower(): # Make drug string to lower case 
                             score+=1 # includeDrug
-                    if not excludeDrug == '':
-                        if excludeDrug.lower() in drug.lower():
+                    if not exclude_drug == '':
+                        if exclude_drug.lower() in drug.lower():
                             score-=1 # excludeDrug
         except KeyError:
             print("No includeDrug and excludeDrug Section")
