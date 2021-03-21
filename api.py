@@ -14,34 +14,60 @@ def home():
 # _______________________ API START _______________________ #
 # request body:
 # {
-#     "data": [json array of trials],
+#     "keyword": "fulvestrant",
+#     "numResults": "10",
 #     "sortingCriteria": "age",
 #     "order": "ascending"
 # }
-API_ENDPOINT = "https://clinicaltrials.gov/api/query/full_studies?expr=paloma+3%0D%0A&min_rnk=1&max_rnk=50&fmt=json"
-response = requests.get(API_ENDPOINT)
+# _______________________ API END _______________________ #
 
-def jsonArrayFromFrontend(): #(fullStudies):
+
+def getTrials(keyword, numResults): #(fullStudies):
     
+    # Use keyword and numResults to query the API
+    key = keyword.split()
+    search = ""
+    lastInd = len(key) - 1
+
+    for i in range(0, len(key)):
+        search = search + key[i]
+        if i != lastInd:
+            search += "+"
+
+    queryString = "https://clinicaltrials.gov/api/query/full_studies?expr=" + search + "&min_rnk=1&max_rnk=" + numResults + "&fmt=json"
+
+    print(queryString)
+
+    response = requests.get(queryString)
+
     fullStudiesResponse=response.json()['FullStudiesResponse']
     fullStudies=fullStudiesResponse['FullStudies']
     # Frontend should pass fullStudies to backend, here I just call directly from API
     
-    setUpScore(fullStudies, '19', 'Breast Cancer', 'breast cancer', 'CNS', True, False, 'Palbociclib', 'Placebo')
-    sortTrials(fullStudies)
-    
     return fullStudies
     
-# _______________________ API END _______________________ #
-
+def applySortingCriteria(trialdata):
+    #setUpScore(trialdata, '19', 'Breast Cancer', 'breast cancer', 'CNS', True, False, 'Palbociclib', 'Placebo')
+    #sortTrials(trialdata)
+    a = "hello"
 
 # Sort Trials By Criteria Route
 @app.route('/api/sortTrialsByCriteria', methods=['GET'])
 def api_sortTrialsByCriteria():
+
+    keyword = request.form['keyword']
+    numresults = request.form['numResults']
+
+    print(keyword + ", " + numresults)
+    # get trial data based on keyword and numResults from front end request
+    trialdata = getTrials(keyword, numresults)
+
+    applySortingCriteria(trialdata)
+
     return jsonify(
         status=True,
         message="Successfully sorted trials",
-        data=jsonArrayFromFrontend()
+        data=trialdata
     )
 
 # sort trials from highest score to lowest (if there is no score, put this trial to tail)
@@ -54,12 +80,12 @@ def sortTrials(fullStudies):
     fullStudies.sort(key=score, reverse=True)
 
 # Assign score to all trials
-def setUpScore(fullStudies, age, condtion, inclusion, exclusion, ongoing, completed, includeDrug, excludeDrug):
+def setUpScore(fullStudies, age, condition, inclusion, exclusion, ongoing, completed, includeDrug, excludeDrug):
     for study in fullStudies:
         try:
             protocolSection=study['Study']['ProtocolSection']
         except KeyError:
-            print "No Protocol Section"
+            print("No Protocol Section")
             continue
             
         score=0
@@ -73,7 +99,7 @@ def setUpScore(fullStudies, age, condtion, inclusion, exclusion, ongoing, comple
                     if int(age)>intMinAge:
                         score+=1
             except KeyError:
-                print "No minimumAge Section"
+                print("No minimumAge Section")
             
             # Check eligibilityCriteria
             try:
@@ -104,7 +130,7 @@ def setUpScore(fullStudies, age, condtion, inclusion, exclusion, ongoing, comple
                         if exclusion in exStr:
                             score+=1
             except KeyError:
-                print "No EligibilityCriteria Section"
+                print("No EligibilityCriteria Section")
             
             
         # Check if this condition exists
@@ -114,7 +140,7 @@ def setUpScore(fullStudies, age, condtion, inclusion, exclusion, ongoing, comple
                 if condtion in conList:
                     score+=1
         except KeyError:
-            print "No condition Section"
+            print("No condition Section")
         
         
         try:
@@ -129,7 +155,7 @@ def setUpScore(fullStudies, age, condtion, inclusion, exclusion, ongoing, comple
                 if completedDate=='Anticipated':
                     score+=1
         except KeyError:
-            print "No completion date Section"
+            print("No completion date Section")
             
         
         try:
@@ -145,7 +171,7 @@ def setUpScore(fullStudies, age, condtion, inclusion, exclusion, ongoing, comple
                         if excludeDrug.lower() in drug.lower():
                             score-=1 # excludeDrug
         except KeyError:
-            print "No includeDrug and excludeDrug Section"
+            print("No includeDrug and excludeDrug Section")
             
         study.update({'score':score})
     
